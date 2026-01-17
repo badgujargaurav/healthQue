@@ -1,0 +1,8 @@
+{
+  "expo": {
+    "name": "healthQue",
+    "slug": "healthque",
+    "platforms": ["ios", "android", "web"],
+    "version": "1.0.0"
+  }
+}

@@ -1,0 +1,54 @@
+Core idea: two modules (Doctor, Patient). Multi-tenant SaaS where each doctor is a tenant. Option A (recommended early): single multi-tenant mobile app where doctors sign in and see their branded dashboard. Option B (advanced): fully white‑label per-doctor apps (automated EAS builds per tenant) — higher complexity and cost.
+
+Suggested tech:
+
+Backend: Node + Express, MySQL (mysql2 + migrations via Knex or Sequelize), JWT auth, API base: /api/v1 (already present).
+Mobile: Expo (React Native) for rapid dev; EAS for production white-label builds.
+Notifications: Firebase Cloud Messaging (FCM).
+Payments: Stripe.
+Storage: S3 for assets, backups.
+Logging/monitoring: morgan + Winston, Sentry, Prometheus.
+Core entities (MySQL tables):
+
+tenants (doctor org): id, name, slug, branding (colors, logo_url), created_at
+users: id, tenant_id, role (doctor/patient/admin), name, email, password_hash, phone, metadata
+patients: id, tenant_id, name, dob, contact, medical_history...
+appointments: id, tenant_id, patient_id, doctor_id, time, status, notes
+records: id, tenant_id, patient_id, type, data (json), created_by
+payments: id, tenant_id, patient_id, amount, currency, status, provider_id
+notifications: id, tenant_id, user_id, channel, payload, sent_at
+Important API endpoints (versioned):
+
+POST /api/v1/tenants/register — create tenant + doctor account (validation)
+POST /api/v1/auth/login, POST /api/v1/auth/logout, POST /api/v1/auth/refresh
+GET /api/v1/doctors (list), GET /api/v1/tenants/:id/branding
+CRUD /api/v1/patients, /appointments, /records, /payments
+POST /api/v1/notifications/send
+Security & multi-tenancy:
+
+Each request includes JWT with tenant_id; middleware enforces tenant scoping.
+Validate all input with express-validator; parameterized SQL to avoid injection.
+Encrypt sensitive data; use HTTPS in production.
+UI/UX & branding:
+
+Central theme system (done). Allow tenant-brand tokens (primary color, logo) stored in tenants.branding.
+Header already supports theme toggle; add tenant branding application.
+Roadmap / next actionable choices (pick one):
+
+Implement doctor registration API + tenant creation + DB migrations (I’ll add schema and endpoints).
+Wire tenants branding into frontend (fetch branding on login and apply).
+Start MySQL integration and create migrations (Knex) and seed sample tenants.
+Implement white-label build automation (EAS config) for per-doctor apps.
+Which do you want me to start now?
+
+
+
+TODO
+
+Define product scope and core entities: Draft core features, entities (tenant, user, doctor, patient, appointment, record), and ownership rules.
+Design multi-tenant architecture and tenancy model: Decide tenant isolation (schema vs. row), tenant scoping middleware, and branding storage.
+Implement auth, roles (doctor, patient), doctor registration API: Finalize role separation, complete doctor registration endpoint edge-cases, and audit logging.
+Implement patient records, appointments, payments APIs: Add models, routes, validation, and tests for these core domains.
+Decide white-label app approach and scaffold mobile build pipeline: Define per-tenant theming/build strategy and CI/CD for Expo/native builds.
+Notifications, reporting, monitoring, and deployment: Add push/email notifications, reporting endpoints, monitoring/alerts, and deployment manifests.
+Would you like me to pick the highest-priority item and start (recommended: implement patient records API or finish doctor registration), or produce a proposed timeline and tasks break-down?
