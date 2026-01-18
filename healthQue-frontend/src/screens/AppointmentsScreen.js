@@ -5,7 +5,7 @@ import Container from '../components/Container';
 import Layout from '../components/Layout';
 import ThemedButton from '../components/ThemedButton';
 import ThemedInput from '../components/ThemedInput';
-import { fetchWithAuth, API_BASE } from '../utils/api';
+import { fetchWithAuth, API_BASE, softDelete } from '../utils/api';
 import { pushDebug, subscribe } from '../utils/devDebug';
 import Toast from 'react-native-toast-message';
 import { DataTable, useTheme, ActivityIndicator, Portal, Dialog, Button } from 'react-native-paper';
@@ -95,7 +95,7 @@ export default function AppointmentsScreen({ navigation }) {
 
   const deleteAppointment = async (id) => {
     try {
-      const r = await fetchWithAuth(`${API_BASE}/appointments/${id}`, { method: 'DELETE' });
+      const r = await softDelete(`${API_BASE}/appointments/${id}`);
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || err.message || 'Failed to delete');

@@ -17,4 +17,7 @@ router.get('/patients', auth, requireRole(['admin','doctor']), [ query('page').o
 router.get('/patients/:id', auth, [ param('id').isInt() ], patientController.get);
 router.put('/patients/:id', auth, [ param('id').isInt(), body('name').optional().isString() ], patientController.update);
 
+// support PATCH for soft-delete and partial updates
+router.patch('/patients/:id', auth, [ param('id').isInt(), body('is_deleted').optional().isInt({ min: 0, max: 1 }), body('name').optional().isString(), body('contact').optional() ], patientController.update);
+
 module.exports = router;

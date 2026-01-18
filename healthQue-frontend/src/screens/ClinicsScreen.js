@@ -11,7 +11,7 @@ import Container from '../components/Container';
 import ThemedInput from '../components/ThemedInput';
 import Layout from '../components/Layout';
 import ThemedButton from '../components/ThemedButton';
-import { fetchWithAuth, API_BASE } from '../utils/api';
+import { fetchWithAuth, API_BASE, softDelete } from '../utils/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { pushDebug, subscribe } from '../utils/devDebug';
 import Toast from 'react-native-toast-message';
@@ -123,7 +123,7 @@ export default function ClinicsScreen({ navigation }) {
 
   const deleteClinic = async (id) => {
     try {
-      const r = await fetchWithAuth(`${API_BASE}/clinics/${id}`, { method: 'DELETE' });
+      const r = await softDelete(`${API_BASE}/clinics/${id}`);
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         throw new Error(err.error || err.message || 'Failed to delete clinic');

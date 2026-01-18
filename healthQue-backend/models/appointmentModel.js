@@ -36,7 +36,7 @@ async function createAppointment({ tenantId, patientId, doctorId, scheduledAt, n
 
 async function getAppointmentById(id) {
   if (USE_MYSQL) {
-    const [rows] = await pool.query('SELECT * FROM appointments WHERE id = ? LIMIT 1', [id]);
+    const [rows] = await pool.query('SELECT * FROM appointments WHERE id = ? AND (is_deleted IS NULL OR is_deleted = 0) LIMIT 1', [id]);
     return rows[0] || null;
   }
   return null;
@@ -49,18 +49,19 @@ async function listAppointments({ tenantId, doctorId, patientId, page = 1, limit
     let where = 'WHERE tenant_id = ?';
     if (doctorId) { where += ' AND doctor_id = ?'; params.push(doctorId); }
     if (patientId) { where += ' AND patient_id = ?'; params.push(patientId); }
-    const [countRows] = await pool.query(`SELECT COUNT(*) as cnt FROM appointments ${where}`, params);
+    const notDeleted = ' AND (is_deleted IS NULL OR is_deleted = 0)';
+    const [countRows] = await pool.query(`SELECT COUNT(*) as cnt FROM appointments ${where}${notDeleted}`, params);
     const total = countRows[0]?.cnt || 0;
     params.push(Number(limit), Number(offset));
     // some schemas use appointment_date + appointment_time instead of scheduled_at
     let rows;
     try {
-      const q = `SELECT *, CONCAT(appointment_date, ' ', appointment_time) as scheduled_at FROM appointments ${where} ORDER BY appointment_date DESC, appointment_time DESC LIMIT ? OFFSET ?`;
+      const q = `SELECT *, CONCAT(appointment_date, ' ', appointment_time) as scheduled_at FROM appointments ${where}${notDeleted} ORDER BY appointment_date DESC, appointment_time DESC LIMIT ? OFFSET ?`;
       const [r] = await pool.query(q, params);
       rows = r;
     } catch (e) {
       // fallback to scheduled_at naming
-      const [r] = await pool.query(`SELECT * FROM appointments ${where} ORDER BY scheduled_at DESC LIMIT ? OFFSET ?`, params);
+      const [r] = await pool.query(`SELECT * FROM appointments ${where}${notDeleted} ORDER BY scheduled_at DESC LIMIT ? OFFSET ?`, params);
       rows = r;
     }
     return { data: rows, total };
@@ -83,6 +84,7 @@ async function updateAppointmentById(id, fields) {
     if (fields.scheduled_at !== undefined) { sets.push('scheduled_at = ?'); params.push(fields.scheduled_at); }
     if (fields.doctor_id !== undefined) { sets.push('doctor_id = ?'); params.push(fields.doctor_id); }
     if (fields.patient_id !== undefined) { sets.push('patient_id = ?'); params.push(fields.patient_id); }
+    if (fields.is_deleted !== undefined) { sets.push('is_deleted = ?'); params.push(Number(fields.is_deleted)); }
     if (!sets.length) return await getAppointmentById(id);
     params.push(id);
     await pool.query(`UPDATE appointments SET ${sets.join(', ')} WHERE id = ?`, params);

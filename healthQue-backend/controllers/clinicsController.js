@@ -22,20 +22,21 @@ exports.listClinics = async (req, res) => {
     }
 
     // Preferred: if doctorId present in payload and clinics has doctor_id, use it
+    const notDeletedCond = '(is_deleted IS NULL OR is_deleted = 0)';
     if (doctorId && hasDoctorId) {
-      [rows] = await pool.query('SELECT * FROM clinics WHERE doctor_id = ?', [doctorId]);
+      [rows] = await pool.query(`SELECT * FROM clinics WHERE doctor_id = ? AND ${notDeletedCond}`, [doctorId]);
       return res.json({ data: rows });
     }
 
     // If both columns exist, query for either match
     if (hasDoctorId && hasUserId) {
-      [rows] = await pool.query('SELECT * FROM clinics WHERE doctor_id = ? OR user_id = ?', [doctorId || null, userId]);
+      [rows] = await pool.query(`SELECT * FROM clinics WHERE (doctor_id = ? OR user_id = ?) AND ${notDeletedCond}`, [doctorId || null, userId]);
       return res.json({ data: rows });
     }
 
     // If only user_id exists
     if (hasUserId) {
-      [rows] = await pool.query('SELECT * FROM clinics WHERE user_id = ?', [userId]);
+      [rows] = await pool.query(`SELECT * FROM clinics WHERE user_id = ? AND ${notDeletedCond}`, [userId]);
       return res.json({ data: rows });
     }
 
@@ -45,7 +46,7 @@ exports.listClinics = async (req, res) => {
         const [drows] = await pool.query('SELECT id FROM doctors WHERE user_id = ? LIMIT 1', [userId]);
         if (drows && drows.length) {
           const did = drows[0].id;
-          [rows] = await pool.query('SELECT * FROM clinics WHERE doctor_id = ?', [did]);
+          [rows] = await pool.query(`SELECT * FROM clinics WHERE doctor_id = ? AND ${notDeletedCond}`, [did]);
           return res.json({ data: rows });
         }
       } catch (e) {
@@ -56,7 +57,7 @@ exports.listClinics = async (req, res) => {
     // Fallbacks: if tenantId available, scope by tenant_id
     if (userPayload.tenantId) {
       try {
-        [rows] = await pool.query('SELECT * FROM clinics WHERE tenant_id = ?', [userPayload.tenantId]);
+        [rows] = await pool.query(`SELECT * FROM clinics WHERE tenant_id = ? AND ${notDeletedCond}`, [userPayload.tenantId]);
         return res.json({ data: rows });
       } catch (e) {
         // ignore and fallback to limited list
@@ -64,7 +65,7 @@ exports.listClinics = async (req, res) => {
     }
 
     // Last resort: return a limited list
-    [rows] = await pool.query('SELECT * FROM clinics LIMIT 100');
+    [rows] = await pool.query(`SELECT * FROM clinics WHERE ${notDeletedCond} LIMIT 100`);
     return res.json({ data: rows });
   } catch (e) {
     console.error('listClinics error', e);
@@ -78,7 +79,7 @@ exports.getClinic = async (req, res) => {
   const userId = userPayload.userId;
   const id = req.params.id;
   try {
-    const [rows] = await pool.query('SELECT * FROM clinics WHERE id = ? LIMIT 1', [id]);
+    const [rows] = await pool.query('SELECT * FROM clinics WHERE id = ? AND (is_deleted IS NULL OR is_deleted = 0) LIMIT 1', [id]);
     if (!rows || !rows.length) return res.status(404).json({ error: 'Clinic not found' });
     const clinic = rows[0];
     const doctorId = userPayload.doctorId;
@@ -99,7 +100,7 @@ exports.updateClinic = async (req, res) => {
   const userId = userPayload.userId;
   const doctorId = userPayload.doctorId;
   const id = req.params.id;
-  const { name, location, address, description, schedule } = req.body || {};
+  const { name, location, address, description, schedule, is_deleted } = req.body || {};
   try {
     const [rows] = await pool.query('SELECT * FROM clinics WHERE id = ? LIMIT 1', [id]);
     if (!rows || !rows.length) return res.status(404).json({ error: 'Clinic not found' });
@@ -119,6 +120,7 @@ exports.updateClinic = async (req, res) => {
     }
     if (description !== undefined) { sets.push('description = ?'); params.push(description); }
     if (schedule !== undefined) { sets.push('schedule = ?'); params.push(typeof schedule === 'string' ? schedule : JSON.stringify(schedule)); }
+    if (is_deleted !== undefined) { sets.push('is_deleted = ?'); params.push(Number(is_deleted)); }
     if (sets.length) {
       params.push(id);
       await pool.query(`UPDATE clinics SET ${sets.join(', ')} WHERE id = ?`, params);

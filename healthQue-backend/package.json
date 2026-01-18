@@ -7,8 +7,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "migrate": "node migrate.js",
-    "migrate:add-clinic-description": "node scripts/add_clinic_description.js",
-    "migrate:dump-tables": "node scripts/dump_table_migrations.js",
+    "db:dump-tables": "node scripts/dump_db_tables.js",
+    "db:watch-tables": "node scripts/watch_db_tables.js",
     "test": "jest --runInBand"
   },
   "dependencies": {

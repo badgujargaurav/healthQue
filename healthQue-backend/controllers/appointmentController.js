@@ -74,9 +74,9 @@ exports.update = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
   const id = req.params.id;
-  const { scheduled_at, doctor_id, patient_id } = req.body;
+  const { scheduled_at, doctor_id, patient_id, is_deleted } = req.body;
   try {
-    const updated = await appointmentModel.updateAppointmentById(id, { scheduled_at, doctor_id, patient_id });
+    const updated = await appointmentModel.updateAppointmentById(id, { scheduled_at, doctor_id, patient_id, is_deleted });
     res.json({ data: updated });
   } catch (e) {
     console.error('update appointment error', e);

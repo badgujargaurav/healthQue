@@ -11,7 +11,7 @@ async function createPatient({ tenantId, name, dob, contact, medical_history }) 
 
 async function getPatientById(id) {
   if (USE_MYSQL) {
-    const [rows] = await pool.query('SELECT * FROM patients WHERE id = ? LIMIT 1', [id]);
+    const [rows] = await pool.query('SELECT * FROM patients WHERE id = ? AND (is_deleted IS NULL OR is_deleted = 0) LIMIT 1', [id]);
     if (!rows[0]) return null;
     const p = rows[0];
     return { ...p, contact: p.contact ? JSON.parse(p.contact) : null, medical_history: p.medical_history ? JSON.parse(p.medical_history) : null };
@@ -30,10 +30,11 @@ async function listPatients({ tenantId, filter, page = 1, limit = 50 }) {
         params.push(`%${filter}%`);
       }
       // total count
-      const [countRows] = await pool.query(`SELECT COUNT(*) as cnt FROM patients ${where}`, params);
+      const notDeleted = ' AND (is_deleted IS NULL OR is_deleted = 0)';
+      const [countRows] = await pool.query(`SELECT COUNT(*) as cnt FROM patients ${where}${notDeleted}`, params);
       const total = countRows[0]?.cnt || 0;
       params.push(Number(limit), Number(offset));
-      const [rows] = await pool.query(`SELECT id,tenant_id,name,dob,contact,medical_history,created_at FROM patients ${where} ORDER BY id DESC LIMIT ? OFFSET ?`, params);
+      const [rows] = await pool.query(`SELECT id,tenant_id,name,dob,contact,medical_history,created_at FROM patients ${where}${notDeleted} ORDER BY id DESC LIMIT ? OFFSET ?`, params);
       const data = rows.map(p => ({ ...p, contact: p.contact ? JSON.parse(p.contact) : null, medical_history: p.medical_history ? JSON.parse(p.medical_history) : null }));
       return { data, total };
     } catch (e) {
@@ -54,6 +55,7 @@ async function updatePatientById(id, fields) {
     if (fields.dob !== undefined) { sets.push('dob = ?'); params.push(fields.dob); }
     if (fields.contact !== undefined) { sets.push('contact = ?'); params.push(JSON.stringify(fields.contact)); }
     if (fields.medical_history !== undefined) { sets.push('medical_history = ?'); params.push(JSON.stringify(fields.medical_history)); }
+    if (fields.is_deleted !== undefined) { sets.push('is_deleted = ?'); params.push(Number(fields.is_deleted)); }
     if (!sets.length) return await getPatientById(id);
     params.push(id);
     await pool.query(`UPDATE patients SET ${sets.join(', ')} WHERE id = ?`, params);

@@ -45,9 +45,10 @@ router.patch('/doctors/:id/trial', auth, requireRole('admin'), [
   body('trial_expires_at').optional().isISO8601()
 ], doctorController.setTrial);
 
-// delete doctor (admin only)
-router.delete('/doctors/:id', auth, requireRole('admin'), [
-  param('id').isInt({ min: 1 })
+// delete doctor (admin only) -> replaced with PATCH to support soft-delete via `is_deleted` flag
+router.patch('/doctors/:id', auth, requireRole('admin'), [
+  param('id').isInt({ min: 1 }),
+  body('is_deleted').optional().isInt({ min: 0, max: 1 })
 ], doctorController.delete);
 
 // Off-days: allow doctors themselves or admins to manage off-days
@@ -75,9 +76,7 @@ router.patch('/doctors/:id/offdays', auth, [
   body('type').optional().isIn(['scheduled','emergency'])
 ], doctorController.setOffDayByDate);
 
-router.delete('/doctors/offdays/:id', auth, [
-  param('id').isInt({ min: 1 })
-], doctorController.deleteOffDay);
+// note: off-days are soft-unset via PATCH endpoints (`/doctors/offdays/:id` exists for toggling)
 
 // PATCH to toggle or set status of an off-day (off / working)
 router.patch('/doctors/offdays/:id', auth, [

@@ -95,3 +95,29 @@ async function parseResponse(res) {
 }
 
 export { API_BASE, getTokens, setTokens, clearTokens, fetchWithAuth, setSessionExpiredHandler, parseResponse };
+
+// Helper to perform soft-delete via PATCH with `{ is_deleted: 1 }` payload.
+async function softDelete(url, options = {}) {
+  const opts = Object.assign({}, options);
+  opts.method = 'PATCH';
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+  // merge provided body with is_deleted flag
+  if (!opts.body) {
+    opts.body = JSON.stringify({ is_deleted: 1 });
+  } else {
+    let parsed;
+    try {
+      parsed = typeof opts.body === 'string' ? JSON.parse(opts.body) : opts.body;
+    } catch (e) {
+      parsed = opts.body;
+    }
+    parsed = Object.assign({}, parsed, { is_deleted: 1 });
+    opts.body = JSON.stringify(parsed);
+  }
+  return fetchWithAuth(url, opts);
+}
+
+// alias
+const deleteAsPatch = softDelete;
+
+export { softDelete, deleteAsPatch };

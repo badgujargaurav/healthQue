@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, TextInput } from 'react-native';
-import { fetchWithAuth, API_BASE } from '../utils/api';
+import { fetchWithAuth, API_BASE, softDelete } from '../utils/api';
 import { pushDebug, subscribe } from '../utils/devDebug';
 import Toast from 'react-native-toast-message';
 import Container from '../components/Container';
@@ -76,7 +76,7 @@ export default function PatientsScreen({ navigation }) {
 
   const deletePatient = async (id) => {
     try {
-      const res = await fetchWithAuth(`${API_BASE}/patients/${id}`, { method: 'DELETE' });
+      const res = await softDelete(`${API_BASE}/patients/${id}`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || err.message || 'Delete failed');

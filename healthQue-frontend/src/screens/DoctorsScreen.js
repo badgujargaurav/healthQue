@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { fetchWithAuth, API_BASE, parseResponse } from '../utils/api';
+import { fetchWithAuth, API_BASE, parseResponse, softDelete } from '../utils/api';
 import { pushDebug, subscribe } from '../utils/devDebug';
 import { useProfile } from '../contexts/ProfileContext';
 import { useTheme as useAppTheme } from '../theme/ThemeProvider';
@@ -138,7 +138,7 @@ export default function DoctorsScreen({ navigation }) {
 
   const deleteDoctor = async (id) => {
     try {
-      const r = await fetchWithAuth(`${API_BASE}/doctors/${id}`, { method: 'DELETE' });
+      const r = await softDelete(`${API_BASE}/doctors/${id}`);
       const parsed = await parseResponse(r);
       if (!parsed.ok) throw new Error((parsed.data && parsed.data.error) || parsed.text || 'Failed to delete');
       Toast.show({ type: 'success', text1: 'Deleted' });

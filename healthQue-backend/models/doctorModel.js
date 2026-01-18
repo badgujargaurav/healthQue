@@ -54,7 +54,10 @@ async function listDoctors({ filter, sortBy = 'id', sortDir = 'asc', page = 1, l
       whereClauses.push('(' + parts.join(' OR ') + ')');
     }
 
-    const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    const notDeleted = 'd.is_deleted IS NULL OR d.is_deleted = 0';
+    if (whereClauses.length) whereClauses.push(`(${notDeleted})`);
+    else whereClauses.push(`(${notDeleted})`);
+    const where = `WHERE ${whereClauses.join(' AND ')}`;
 
     // determine order expression safely
     let orderExpr = 'd.id';
@@ -234,12 +237,12 @@ async function createDoctorAdmin({ tenantId, name, email, password, specialty, l
 
 async function deleteDoctor(id) {
   if (USE_MYSQL && dbPool) {
-    const [res] = await dbPool.query('DELETE FROM doctors WHERE id = ?', [id]);
+    const [res] = await dbPool.query('UPDATE doctors SET is_deleted = 1 WHERE id = ?', [id]);
     return res.affectedRows > 0;
   }
   const idx = doctors.findIndex(d => String(d.id) === String(id));
   if (idx === -1) return false;
-  doctors.splice(idx, 1);
+  doctors[idx].is_deleted = 1;
   return true;
 }
 
@@ -339,7 +342,7 @@ async function getDoctorById(id) {
     if (docColNames.includes('clinic_address')) selectCols.push('d.clinic_address');
     if (docColNames.includes('clinic_id')) selectCols.push('d.clinic_id');
     selectCols.push('u.email', 'u.phone');
-    const sql = `SELECT ${selectCols.join(', ')} FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.id = ? LIMIT 1`;
+    const sql = `SELECT ${selectCols.join(', ')} FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.id = ? AND (d.is_deleted IS NULL OR d.is_deleted = 0) LIMIT 1`;
     const [rows] = await dbPool.query(sql, [id]);
     const row = rows[0] || null;
     if (row) {
